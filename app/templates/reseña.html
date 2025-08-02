@@ -1,0 +1,124 @@
+<!-- reseña.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reseñas</title>
+  <script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
+  <script defer src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+        rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body class="bg-gray-100">
+
+  <!-- Modal para nueva reseña -->
+  <div id="reviewModal" class="fixed inset-0 flex items-center justify-center bg-black/50 hidden">
+    <div class="bg-white rounded-xl w-11/12 max-w-lg p-6 relative">
+      <button id="closeModal" class="absolute top-2 right-2 text-gray-500">&times;</button>
+      <h2 class="text-xl font-bold mb-4">Nueva reseña</h2>
+
+      <form id="reviewForm" class="space-y-4">
+        <input type="hidden" name="gas_station_id" value="{{ gas_station_id }}" />
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Tu nombre</label>
+          <input name="name" required minlength="2"
+                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Calificación</label>
+          <div class="flex space-x-1 mt-1">
+            <!-- ★ radio buttons 5-1 -->
+            <template id="starTemplate">
+              <input type="radio" name="rating" class="hidden" />
+              <i class="fa-star fa cursor-pointer text-2xl text-gray-300"></i>
+            </template>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Tu comentario</label>
+          <textarea name="comment" rows="4" required minlength="10"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"></textarea>
+        </div>
+
+        <button type="submit"
+                class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
+          Publicar reseña
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Botón flotante -->
+  <button id="openModal"
+          class="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg">
+    <i class="fas fa-plus"></i>
+  </button>
+
+  <!-- Toast -->
+  <div id="toast"
+       class="fixed bottom-20 right-6 bg-green-600 text-white px-4 py-2 rounded shadow hidden"></div>
+
+  <script>
+    /* ----- modal helpers ----- */
+    const modal   = document.getElementById('reviewModal');
+    const open    = document.getElementById('openModal');
+    const close   = document.getElementById('closeModal');
+    const toast   = document.getElementById('toast');
+    const starBox = modal.querySelector('.flex');
+
+    open.onclick  = () => modal.classList.remove('hidden');
+    close.onclick = () => modal.classList.add('hidden');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+
+    /* ----- estrellas dinámicas ----- */
+    const starTpl = document.getElementById('starTemplate').content;
+    for (let i = 5; i >= 1; i--) {
+      const frag = starTpl.cloneNode(true);
+      const input = frag.querySelector('input');
+      const icon  = frag.querySelector('i');
+      input.id    = `star${i}`;
+      input.value = i;
+      icon.setAttribute('for', `star${i}`);
+      icon.addEventListener('click', () => {
+        input.checked = true;
+        starBox.querySelectorAll('i').forEach(st => st.classList.replace('text-yellow-500', 'text-gray-300'));
+        icon.classList.replace('text-gray-300', 'text-yellow-500');
+      });
+      starBox.appendChild(frag);
+    }
+
+    /* ----- submit reseña ----- */
+    document.getElementById('reviewForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const token = await grecaptcha.execute('{{ recaptcha_site_key }}', { action: 'review' });
+      fd.append('g-recaptcha-response', token);
+
+      try {
+        const response = await axios.post('/api/v1/reviews/', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        // Mostrar toast con ID de reseña
+        toast.innerHTML = `¡Reseña publicada! ID: ${response.data.review_id}`;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 4000);
+        
+        modal.classList.add('hidden');
+        e.target.reset();
+        
+        // Reset visual de estrellas
+        starBox.querySelectorAll('i').forEach(st => st.classList.replace('text-yellow-500', 'text-gray-300'));
+      } catch (err) {
+        const errorMsg = err.response?.data?.detail ?? 'Error al enviar reseña';
+        alert(errorMsg);
+        console.error('Review error:', err);
+      }
+    });
+  </script>
+</body>
+</html>

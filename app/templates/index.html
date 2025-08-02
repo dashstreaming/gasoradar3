@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gasoradar - Encuentra gasolineras baratas en México</title>
+    <meta name="description" content="Encuentra las gasolineras más baratas cerca de ti. Precios actualizados por usuarios reales en todo México.">
+    <meta name="keywords" content="gasolineras, precios, combustible, México, barato, magna, premium, diesel">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hero-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); }
+        .loading-spinner { display: none; }
+        .loading .loading-spinner { display: inline-block; }
+        .price-badge { font-weight: 600; font-size: 1.125rem; }
+        .fuel-icon { width: 24px; height: 24px; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="bg-blue-600 p-2 rounded-lg text-white mr-3">
+                    <i class="fas fa-gas-pump text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Gasoradar</h1>
+                    <p class="text-sm text-gray-600">Precios actualizados en tiempo real</p>
+                </div>
+            </div>
+            <nav class="hidden md:flex items-center space-x-6">
+                <a href="/" class="text-blue-600 font-medium">Inicio</a>
+                <a href="/mapa" class="text-gray-600 hover:text-blue-600 transition">Mapa</a>
+                <a href="/reporte" class="text-gray-600 hover:text-blue-600 transition">Reportar Precio</a>
+                <button id="locationBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
+                    <i class="fas fa-location-arrow mr-2"></i>Mi Ubicación
+                </button>
+            </nav>
+            <button id="mobileMenuBtn" class="md:hidden text-gray-600">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
+        <div id="mobileMenu" class="hidden px-4 pb-4 border-t">
+            <nav class="flex flex-col space-y-3">
+                <a href="/" class="text-blue-600 font-medium">Inicio</a>
+                <a href="/mapa" class="text-gray-600">Mapa</a>
+                <a href="/reporte" class="text-gray-600">Reportar Precio</a>
+                <button id="locationBtnMobile" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-left">
+                    <i class="fas fa-location-arrow mr-2"></i>Mi Ubicación
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-gradient text-white py-16">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-4xl md:text-5xl font-bold mb-6">Encuentra las gasolineras más baratas</h2>
+            <p class="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
+                Compara precios de combustible en tiempo real, reportados por usuarios como tú en todo México
+            </p>
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-lg shadow-lg p-2">
+                    <div class="flex flex-col md:flex-row gap-2">
+                        <input id="searchInput" type="text" placeholder="Ciudad o estado (ej. Monterrey, Jalisco)"
+                               class="flex-1 px-4 py-3 text-gray-900 bg-transparent focus:outline-none" />
+                        <select id="fuelTypeSelect"
+                                class="px-4 py-3 text-gray-900 bg-transparent focus:outline-none border-l">
+                            <option value="magna">Magna</option>
+                            <option value="premium">Premium</option>
+                            <option value="diesel">Diésel</option>
+                        </select>
+                        <button id="searchBtn"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center transition">
+                            <i class="fas fa-search mr-2"></i>Buscar
+                            <div class="loading-spinner ml-2">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Stats -->
+    <section class="py-12 bg-white">
+        <div class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+            <div>
+                <div id="totalStations" class="text-3xl font-bold text-blue-600">-</div>
+                <div class="text-gray-600">Gasolineras</div>
+            </div>
+            <div>
+                <div id="avgMagnaPrice" class="text-3xl font-bold text-green-600">-</div>
+                <div class="text-gray-600">Precio Magna promedio</div>
+            </div>
+            <div>
+                <div id="totalReports" class="text-3xl font-bold text-purple-600">-</div>
+                <div class="text-gray-600">Reportes de usuarios</div>
+            </div>
+            <div>
+                <div id="lastUpdate" class="text-3xl font-bold text-orange-600">-</div>
+                <div class="text-gray-600">Última actualización</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8">
+        <aside class="lg:w-1/4">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-semibold mb-4">Filtros</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Combustible</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="radio" name="fuelFilter" value="magna" checked class="text-blue-600" />
+                                <span class="ml-2 flex items-center">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div> Magna
+                                </span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="fuelFilter" value="premium" class="text-blue-600" />
+                                <span class="ml-2 flex items-center">
+                                    <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div> Premium
+                                </span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="fuelFilter" value="diesel" class="text-blue-600" />
+                                <span class="ml-2 flex items-center">
+                                    <div class="w-3 h-3 bg-gray-800 rounded-full mr-2"></div> Diésel
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Distancia máxima</label>
+                        <select id="distanceFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="5">5 km</option>
+                            <option value="10">10 km</option>
+                            <option value="25" selected>25 km</option>
+                            <option value="50">50 km</option>
+                            <option value="100">100 km</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Marca</label>
+                        <select id="brandFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="">Todas</option>
+                            <option>Pemex</option>
+                            <option>Shell</option>
+                            <option>BP</option>
+                            <option>Mobil</option>
+                            <option>Total</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Servicios</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="convenienceStore" class="text-blue-600" />
+                                <span class="ml-2 text-sm">Tienda de conveniencia</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="carWash" class="text-blue-600" />
+                                <span class="ml-2 text-sm">Autolavado</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="atm" class="text-blue-600" />
+                                <span class="ml-2 text-sm">Cajero automático</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button id="applyFilters"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition">
+                        Aplicar Filtros
+                    </button>
+                </div>
+            </div>
+        </aside>
+        <div class="lg:w-3/4 bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-4 border-b bg-gray-50 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold">Gasolineras cercanas</h3>
+                    <p id="resultsCount" class="text-sm text-gray-600">Cargando...</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <select id="sortBy" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="price">Precio más bajo</option>
+                        <option value="distance">Distancia</option>
+                        <option value="rating">Mejor calificación</option>
+                        <option value="updated">Más reciente</option>
+                    </select>
+                    <div class="flex rounded-lg border border-gray-300 overflow-hidden">
+                        <button id="listView" class="px-3 py-2 bg-blue-600 text-white">
+                            <i class="fas fa-list"></i>
+                        </button>
+                        <button id="mapView" class="px-3 py-2 bg-white text-gray-600 hover:bg-gray-50">
+                            <i class="fas fa-map"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="resultsContainer" class="divide-y divide-gray-200">
+                <div id="loadingState" class="p-8 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="mt-2 text-gray-600">Cargando gasolineras...</p>
+                </div>
+                <div id="emptyState" class="hidden p-8 text-center">
+                    <i class="fas fa-search text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-600 mb-4">No se encontraron gasolineras con los filtros seleccionados</p>
+                    <button onclick="initializeApp()" class="text-blue-600 hover:text-blue-700">Limpiar filtros</button>
+                </div>
+            </div>
+            <div id="pagination" class="hidden px-6 py-4 border-t bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div id="paginationInfo" class="text-sm text-gray-600"></div>
+                    <div id="paginationButtons" class="flex space-x-2"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- CTA -->
+    <section class="bg-blue-600 text-white py-16">
+        <div class="container mx-auto px-4 text-center">
+            <h3 class="text-3xl font-bold mb-4">¿Viste un precio diferente?</h3>
+            <p class="text-xl text-blue-100 mb-8">Ayuda a la comunidad reportando precios actualizados</p>
+            <a href="/reporte" class="bg-white text-blue-600 hover:bg-blue-50 px-8 py-3 rounded-lg font-semibold transition">
+                Reportar Precio
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+                <div class="flex items-center mb-4">
+                    <div class="bg-blue-600 p-2 rounded-lg text-white mr-3">
+                        <i class="fas fa-gas-pump"></i>
+                    </div>
+                    <span class="text-xl font-bold">Gasoradar</span>
+                </div>
+                <p class="text-gray-400">Encuentra las gasolineras más baratas de México con precios actualizados por la comunidad.</p>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-4">Enlaces</h4>
+                <ul class="space-y-2 text-gray-400">
+                    <li><a href="/" class="hover:text-white">Inicio</a></li>
+                    <li><a href="/mapa" class="hover:text-white">Mapa</a></li>
+                    <li><a href="/reporte" class="hover:text-white">Reportar Precio</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-4">Información</h4>
+                <ul class="space-y-2 text-gray-400">
+                    <li><a href="#" class="hover:text-white">Acerca de</a></li>
+                    <li><a href="#" class="hover:text-white">Términos de Uso</a></li>
+                    <li><a href="#" class="hover:text-white">Privacidad</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-4">Contacto</h4>
+                <p class="text-gray-400 mb-2">¿Tienes sugerencias?</p>
+                <a href="mailto:contacto@gasoradar.com" class="text-blue-400 hover:text-blue-300">
+                    contacto@gasoradar.com
+                </a>
+            </div>
+        </div>
+        <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2025 Gasoradar. Los precios pueden variar sin previo aviso.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Estado global de la aplicación
+        let appState = {
+            userLocation: null,
+            currentResults: [],
+            currentPage: 1,
+            totalPages: 1,
+            filters: {
+                fuelType: 'magna',
+                distance: 25,
+                brand: '',
+                services: []
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+            loadInitialData();
+            setupEventListeners();
+        });
+
+        function initializeApp() {
+            const saved = localStorage.getItem('userLocation');
+            if (saved) {
+                appState.userLocation = JSON.parse(saved);
+                updateLocationStatus();
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+                document.getElementById('mobileMenu').classList.toggle('hidden');
+            });
+            document.getElementById('locationBtn').addEventListener('click', requestLocation);
+            document.getElementById('locationBtnMobile').addEventListener('click', requestLocation);
+            document.getElementById('searchBtn').addEventListener('click', performSearch);
+            document.getElementById('searchInput').addEventListener('keypress', e => {
+                if (e.key === 'Enter') performSearch();
+            });
+            document.getElementById('applyFilters').addEventListener('click', applyFilters);
+            document.getElementById('sortBy').addEventListener('change', loadResults);
+            document.getElementById('listView').addEventListener('click', () => {
+                document.getElementById('listView').classList.replace('bg-white', 'bg-blue-600');
+                document.getElementById('listView').classList.replace('text-gray-600', 'text-white');
+                document.getElementById('mapView').classList.replace('bg-blue-600', 'bg-white');
+                document.getElementById('mapView').classList.replace('text-white', 'text-gray-600');
+            });
+            document.getElementById('mapView').addEventListener('click', () => window.location.href = '/mapa');
+        }
+
+        async function loadInitialData() {
+            try {
+                await loadStatistics();
+                if (appState.userLocation) {
+                    await loadNearbyStations();
+                } else {
+                    await loadPopularStations();
+                }
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+                showError('Error cargando datos iniciales');
+            }
+        }
+
+        async function loadNearbyStations() {
+            const { latitude, longitude } = appState.userLocation;
+            const url = `/api/v1/gas-stations/?latitude=${latitude}&longitude=${longitude}&radius_km=${appState.filters.distance}&fuel_type=${appState.filters.fuelType}&limit=20`;
+            
+            try {
+                showLoading();
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                appState.currentResults = data.stations;
+                displayResults(data);
+            } catch (error) {
+                console.error('Error loading nearby stations:', error);
+                showError('Error cargando gasolineras cercanas');
+            }
+        }
+
+        async function loadPopularStations() {
+            const url = `/api/v1/gas-stations/?limit=20&fuel_type=${appState.filters.fuelType}`;
+            
+            try {
+                showLoading();
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                appState.currentResults = data.stations;
+                displayResults(data);
+            } catch (error) {
+                console.error('Error loading popular stations:', error);
+                showError('Error cargando gasolineras populares');
+            }
+        }
+
+        async function loadStatistics() {
+            try {
+                const response = await fetch(`/api/v1/gas-stations/statistics/overview`);
+                const data = await response.json();
+                
+                document.getElementById('totalStations').textContent = data.total_stations.toLocaleString();
+                document.getElementById('totalReports').textContent = data.total_prices.toLocaleString();
+                
+                // Obtener estadísticas de precios
+                const priceResponse = await fetch(`/api/v1/prices/statistics?fuel_type=magna`);
+                if (priceResponse.ok) {
+                    const priceData = await priceResponse.json();
+                    document.getElementById('avgMagnaPrice').textContent = `$${priceData.average}`;
+                }
+                
+                document.getElementById('lastUpdate').textContent = 'Hace 5 min';
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        function displayResults(data) {
+            hideLoading();
+            const container = document.getElementById('resultsContainer');
+            const resultsCount = document.getElementById('resultsCount');
+
+            if (!data.stations.length) {
+                container.innerHTML = document.getElementById('emptyState').outerHTML;
+                document.getElementById('emptyState').classList.remove('hidden');
+                resultsCount.textContent = 'No se encontraron resultados';
+                return;
+            }
+
+            resultsCount.textContent = `${data.stations.length} gasolineras encontradas`;
+            container.innerHTML = data.stations.map(createStationCard).join('');
+
+            if (data.total_pages > 1) {
+                setupPagination(data);
+            }
+        }
+
+        function createStationCard(station) {
+            const priceObj = station.current_prices[appState.filters.fuelType] || {};
+            const price = priceObj.price ? `$${priceObj.price}` : 'N/A';
+            const distance = station.distance_km ? `${station.distance_km.toFixed(1)} km` : '';
+            const updated = priceObj.updated_at ? timeAgo(priceObj.updated_at) : '';
+
+            return `
+                <div class="p-6 cursor-pointer station-card card-hover" onclick="viewStationDetail('${station.id}')">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold text-lg">${station.name}</h4>
+                        <span class="price-badge">${price}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm text-gray-600">
+                        <span>${station.brand || ''}</span>
+                        <span>${distance}</span>
+                        <span>${updated}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function requestLocation() {
+            if (!navigator.geolocation) {
+                showError('Geolocalización no soportada');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(pos => {
+                appState.userLocation = {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude
+                };
+                localStorage.setItem('userLocation', JSON.stringify(appState.userLocation));
+                updateLocationStatus();
+                loadNearbyStations();
+            }, () => showError('No se pudo obtener la ubicación'));
+        }
+
+        function updateLocationStatus() {
+            const status = document.getElementById('locationStatus');
+            const text = document.getElementById('locationText');
+            if (appState.userLocation) {
+                status.classList.remove('hidden');
+                text.textContent = `Lat: ${appState.userLocation.latitude.toFixed(4)}, Lon: ${appState.userLocation.longitude.toFixed(4)}`;
+            }
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                showError('Por favor ingresa una ciudad o estado');
+                return;
+            }
+            showLoading();
+            try {
+                const fuelType = document.getElementById('fuelTypeSelect').value;
+                const response = await fetch(`/api/v1/gas-stations/search?location=${encodeURIComponent(query)}&fuel_type=${fuelType}&limit=20`);
+                const data = await response.json();
+                if (data.stations.length) {
+                    displayResults(data);
+                } else {
+                    showError(`No se encontraron gasolineras en ${query}`);
+                }
+            } catch {
+                showError('Error realizando la búsqueda');
+            }
+        }
+
+        function setupPagination({ total_pages, page }) {
+            appState.totalPages = total_pages;
+            appState.currentPage = page;
+            const info = document.getElementById('paginationInfo');
+            const buttons = document.getElementById('paginationButtons');
+            info.textContent = `Página ${page} de ${total_pages}`;
+            buttons.innerHTML = '';
+            for (let p = 1; p <= total_pages; p++) {
+                const btn = document.createElement('button');
+                btn.textContent = p;
+                btn.className = `px-3 py-1 rounded ${p === page ? 'bg-blue-600 text-white' : 'bg-gray-200'}`;
+                btn.onclick = () => loadResults(p);
+                buttons.appendChild(btn);
+            }
+            document.getElementById('pagination').classList.remove('hidden');
+        }
+
+        function loadResults(page = 1) {
+            appState.currentPage = page;
+            if (appState.userLocation) {
+                loadNearbyStations();
+            } else {
+                loadPopularStations();
+            }
+        }
+
+        function applyFilters() {
+            const fuel = document.querySelector('input[name="fuelFilter"]:checked').value;
+            const dist = document.getElementById('distanceFilter').value;
+            appState.filters.fuelType = fuel;
+            appState.filters.distance = Number(dist);
+            loadResults();
+        }
+
+        function viewStationDetail(id) {
+            window.location.href = `/gas-station/${id}`;
+        }
+
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        function showError(msg) {
+            alert(msg);
+        }
+
+        function timeAgo(dateString) {
+            const now = new Date(), date = new Date(dateString);
+            const diffInSeconds = Math.floor((now - date) / 1000);
+            if (diffInSeconds < 60) return 'Hace un momento';
+            const diffInMinutes = Math.floor(diffInSeconds / 60);
+            if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
+            const diffInHours = Math.floor(diffInMinutes / 60);
+            if (diffInHours < 24) return `Hace ${diffInHours}h`;
+            const diffInDays = Math.floor(diffInHours / 24);
+            return `Hace ${diffInDays} días`;
+        }
+    </script>
+</body>
+</html>

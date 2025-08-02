@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Gasolineras - Gasoradar</title>
+    <meta name="description" content="Mapa interactivo con gasolineras y precios en tiempo real en México">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- MarkerCluster CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"/>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; margin: 0; }
+        #map { height: 100vh; width: 100%; }
+        .leaflet-popup-content-wrapper { border-radius: 12px !important; }
+        .floating-control { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .price-tag { background: linear-gradient(135deg,#10B981,#059669); color: white; padding: 4px 8px; border-radius: 8px; font-weight:600; font-size:12px; position:relative; }
+        .price-tag::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:#059669; }
+        .fuel-selector.active { box-shadow: 0 0 0 3px rgba(59,130,246,0.3); }
+        .loading-overlay { position:fixed; inset:0; background:rgba(255,255,255,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="text-center">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
+            <p class="text-gray-600">Cargando gasolineras...</p>
+        </div>
+    </div>
+
+    <!-- Map -->
+    <div id="map"></div>
+
+    <!-- Top Controls -->
+    <div class="fixed top-4 left-4 right-4 flex flex-col md:flex-row gap-4 z-50">
+        <button id="backBtn" class="floating-control px-4 py-2 flex items-center text-gray-700 hover:text-blue-600">
+            <i class="fas fa-arrow-left mr-2"></i><span>Regresar</span>
+        </button>
+        <div class="floating-control flex-1 relative">
+            <input id="searchInput" type="text" placeholder="Buscar ciudad, estado o gasolinera..." class="w-full px-4 py-2 rounded-lg border focus:outline-none"/>
+            <button id="searchBtn" class="absolute right-2 top-2 text-gray-500 hover:text-blue-600">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+        <div class="floating-control p-2 flex space-x-2">
+            <button class="fuel-selector active px-3 py-2 rounded-lg bg-green-100 text-green-800" data-fuel="magna">Magna</button>
+            <button class="fuel-selector px-3 py-2 rounded-lg bg-gray-100 text-gray-700" data-fuel="premium">Premium</button>
+            <button class="fuel-selector px-3 py-2 rounded-lg bg-gray-100 text-gray-700" data-fuel="diesel">Diésel</button>
+        </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="fixed bottom-4 left-4 right-4 flex justify-between items-center z-50">
+        <button id="locateBtn" class="floating-control p-3 text-blue-600 hover:text-blue-800">
+            <i class="fas fa-location-arrow"></i>
+        </button>
+        <button id="filtersBtn" class="floating-control px-4 py-2 flex items-center text-gray-700 hover:text-blue-600">
+            <i class="fas fa-filter mr-2"></i><span>Filtros</span>
+        </button>
+        <button id="bestOptionBtn" class="floating-control px-4 py-2 flex items-center bg-blue-600 text-white hover:bg-blue-700">
+            <i class="fas fa-star mr-2"></i><span>Mejor Opción</span>
+        </button>
+    </div>
+
+    <!-- Filters Panel -->
+    <div id="filtersPanel" class="fixed top-0 right-0 h-full w-80 bg-white shadow transform translate-x-full transition-transform z-50">
+        <div class="p-6 flex flex-col h-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Filtros</h3>
+                <button id="closeFilters" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
+            </div>
+            <label class="block text-sm font-medium text-gray-700">Radio (km)</label>
+            <select id="radiusFilter" class="mb-4 border rounded px-2 py-1">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <label class="block text-sm font-medium text-gray-700">Marca</label>
+            <div class="mb-4 space-y-2">
+                <label><input type="checkbox" class="brand-filter" value="Pemex"/> Pemex</label>
+                <label><input type="checkbox" class="brand-filter" value="Shell"/> Shell</label>
+                <label><input type="checkbox" class="brand-filter" value="BP"/> BP</label>
+                <label><input type="checkbox" class="brand-filter" value="Mobil"/> Mobil</label>
+                <label><input type="checkbox" class="brand-filter" value="Total"/> Total</label>
+            </div>
+            <label class="block text-sm font-medium text-gray-700">Servicios</label>
+            <div class="mb-4 space-y-2">
+                <label><input type="checkbox" id="hasConvenienceStore"/> Tienda</label>
+                <label><input type="checkbox" id="hasCarWash"/> Autolavado</label>
+                <label><input type="checkbox" id="hasATM"/> Cajero</label>
+                <label><input type="checkbox" id="hasRestroom"/> Baños</label>
+            </div>
+            <button id="applyFilters" class="mt-auto bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Aplicar</button>
+            <button id="clearFilters" class="mt-2 text-gray-600 hover:text-gray-800">Limpiar</button>
+        </div>
+    </div>
+
+    <!-- Station Modal -->
+    <div id="stationModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg w-full max-w-md overflow-y-auto max-h-[80vh]">
+            <div class="p-4 flex justify-between items-center border-b">
+                <h3 id="modalTitle" class="text-xl font-semibold"></h3>
+                <button id="closeModal" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modalContent" class="p-4 text-gray-700"></div>
+        </div>
+    </div>
+
+    <script>
+    // Variables globales
+    let map;
+    let markersLayer;
+    let userLocation = null;
+    let currentFuelType = 'magna';
+    let gasStations = [];
+    let isLoading = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        setupEventListeners();
+        requestUserLocation();
+    });
+
+    function initMap() {
+        map = L.map('map').setView([23.6345, -102.5528], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        markersLayer = L.markerClusterGroup();
+        map.addLayer(markersLayer);
+    }
+
+    function setupEventListeners() {
+        document.getElementById('backBtn').addEventListener('click', () => window.location.href = '/');
+        document.getElementById('locateBtn').addEventListener('click', requestUserLocation);
+        document.getElementById('searchBtn').addEventListener('click', performSearch);
+        document.getElementById('searchInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') performSearch();
+        });
+        document.querySelectorAll('.fuel-selector').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.fuel-selector').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFuelType = btn.dataset.fuel;
+                updateMarkers();
+            });
+        });
+        document.getElementById('filtersBtn').addEventListener('click', () => {
+            document.getElementById('filtersPanel').classList.remove('translate-x-full');
+        });
+        document.getElementById('closeFilters').addEventListener('click', () => {
+            document.getElementById('filtersPanel').classList.add('translate-x-full');
+        });
+        document.getElementById('applyFilters').addEventListener('click', applyFilters);
+        document.getElementById('clearFilters').addEventListener('click', clearFilters);
+        document.getElementById('bestOptionBtn').addEventListener('click', showBestOption);
+        document.getElementById('closeModal').addEventListener('click', () => {
+            document.getElementById('stationModal').classList.add('hidden');
+        });
+        document.getElementById('stationModal').addEventListener('click', e => {
+            if (e.target === document.getElementById('stationModal')) {
+                document.getElementById('stationModal').classList.add('hidden');
+            }
+        });
+    }
+
+    async function requestUserLocation() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(pos => {
+            userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            map.setView([userLocation.lat, userLocation.lng], 12);
+            loadGasStations();
+        }, err => {
+            console.warn('Ubicación denegada:', err);
+            loadGasStations();
+        });
+    }
+
+    async function loadGasStations() {
+        if (isLoading) return;
+        isLoading = true;
+        showLoading();
+        try {
+            let url = '/api/v1/gas-stations/?limit=100';
+            if (userLocation) {
+                url += `&latitude=${userLocation.lat}&longitude=${userLocation.lng}&radius_km=50`;
+            }
+            const res = await fetch(url);
+            const json = await res.json();
+            gasStations = json.stations || [];
+            updateMarkers();
+        } catch (e) {
+            console.error('Error loading gas stations:', e);
+            showError('Error cargando gasolineras');
+        } finally {
+            isLoading = false;
+            hideLoading();
+        }
+    }
+
+    function updateMarkers() {
+        markersLayer.clearLayers();
+        gasStations.forEach(st => {
+            const marker = createStationMarker(st);
+            if (marker) markersLayer.addLayer(marker);
+        });
+    }
+
+    function createStationMarker(station) {
+        const coords = [station.latitude, station.longitude];
+        if (!coords[0] || !coords[1]) return null;
+        const priceObj = station.current_prices?.[currentFuelType];
+        const price = priceObj?.price?.toFixed(2) ?? 'N/A';
+        const iconHtml = `<div class="price-tag">$${price}</div>`;
+        const icon = L.divIcon({ html: iconHtml, className: 'price-marker', iconSize: [50, 50], iconAnchor: [25, 50] });
+        const marker = L.marker(coords, { icon });
+        marker.on('click', () => showStationModal(station));
+        return marker;
+    }
+
+    function showStationModal(station) {
+        document.getElementById('modalTitle').textContent = station.name;
+        const priceObj = station.current_prices?.[currentFuelType];
+        const price = priceObj?.price?.toFixed(2) ?? 'N/A';
+        const updated = priceObj?.updated_at ? timeAgo(priceObj.updated_at) : 'No disponible';
+        const distance = station.distance_km ? `${station.distance_km.toFixed(1)} km` : '';
+        const html = `
+            <p><strong>Marca:</strong> ${station.brand || '—'}</p>
+            <p><strong>Precio ${currentFuelType}:</strong> $${price}</p>
+            <p><strong>Distancia:</strong> ${distance}</p>
+            <p><strong>Actualizado:</strong> ${updated}</p>
+            <div class="mt-4 flex space-x-2">
+                <button onclick="location.href='/reporte?gas_station_id=${station.id}'" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Reportar precio</button>
+                <button onclick="location.href='/reseña?gas_station_id=${station.id}'" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Escribir reseña</button>
+            </div>
+        `;
+        document.getElementById('modalContent').innerHTML = html;
+        document.getElementById('stationModal').classList.remove('hidden');
+    }
+
+    async function performSearch() {
+        const q = document.getElementById('searchInput').value.trim();
+        if (!q) return loadGasStations();
+        showLoading();
+        try {
+            const res = await fetch(`/api/v1/gas-stations/search?location=${encodeURIComponent(q)}&limit=100`);
+            const json = await res.json();
+            gasStations = json.stations || [];
+            updateMarkers();
+        } catch {
+            showError('Error en búsqueda');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function applyFilters() {
+        const radius = +document.getElementById('radiusFilter').value;
+        const brands = Array.from(document.querySelectorAll('.brand-filter:checked')).map(i => i.value);
+        const hasStore = document.getElementById('hasConvenienceStore').checked;
+        const hasWash = document.getElementById('hasCarWash').checked;
+        const hasATM = document.getElementById('hasATM').checked;
+        const hasRest = document.getElementById('hasRestroom').checked;
+        const filtered = gasStations.filter(st => {
+            if (userLocation && st.distance_km > radius) return false;
+            if (brands.length && !brands.includes(st.brand)) return false;
+            const srv = st.services || {};
+            if (hasStore && !srv.convenience_store) return false;
+            if (hasWash && !srv.car_wash) return false;
+            if (hasATM && !srv.atm) return false;
+            if (hasRest && !srv.restroom) return false;
+            return true;
+        });
+        markersLayer.clearLayers();
+        filtered.forEach(st => {
+            const m = createStationMarker(st);
+            if (m) markersLayer.addLayer(m);
+        });
+        document.getElementById('filtersPanel').classList.add('translate-x-full');
+    }
+
+    function clearFilters() {
+        document.querySelectorAll('#filtersPanel input').forEach(i => i.checked = false);
+        document.getElementById('radiusFilter').value = '25';
+        document.getElementById('filtersPanel').classList.add('translate-x-full');
+        updateMarkers();
+    }
+
+    function showBestOption() {
+        let best = null;
+        gasStations.forEach(st => {
+            const p = st.current_prices?.[currentFuelType]?.price;
+            if (p != null && (!best || p < best.current_prices[currentFuelType].price)) {
+                best = st;
+            }
+        });
+        if (best) {
+            map.setView([best.latitude, best.longitude], 14);
+            showStationModal(best);
+        } else {
+            showError('No hay datos para determinar la mejor opción');
+        }
+    }
+
+    function showLoading() {
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+    }
+
+    function showError(msg) {
+        alert(msg);
+    }
+
+    function timeAgo(iso) {
+        const now = Date.now(), then = new Date(iso).getTime();
+        const d = Math.floor((now - then) / 1000);
+        if (d < 60) return 'Hace un momento';
+        if (d < 3600) return `Hace ${Math.floor(d/60)} min`;
+        if (d < 86400) return `Hace ${Math.floor(d/3600)} h`;
+        return `Hace ${Math.floor(d/86400)} días`;
+    }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gasoradar - Encuentra gasolineras baratas en México{% endblock %}</title>
+    
+    <!-- Meta tags SEO -->
+    <meta name="description" content="{% block description %}Encuentra las gasolineras más baratas cerca de ti. Precios actualizados por usuarios reales en todo México.{% endblock %}">
+    <meta name="keywords" content="{% block keywords %}gasolineras, precios, combustible, México, barato, magna, premium, diesel{% endblock %}">
+    <meta name="author" content="Gasoradar">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://gasoradar.com{% block og_url %}/{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}https://gasoradar.com/static/images/og-image.jpg{% endblock %}">
+    <meta property="og:locale" content="es_MX">
+    <meta property="og:site_name" content="Gasoradar">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://gasoradar.com{% block twitter_url %}/{% endblock %}">
+    <meta property="twitter:title" content="{% block twitter_title %}{{ self.title() }}{% endblock %}">
+    <meta property="twitter:description" content="{% block twitter_description %}{{ self.description() }}{% endblock %}">
+    <meta property="twitter:image" content="{% block twitter_image %}{{ self.og_image() }}{% endblock %}">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://gasoradar.com{% block canonical %}/{% endblock %}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/images/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/images/apple-touch-icon.png">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#3B82F6">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
+    
+    <!-- Stylesheets -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Utility classes */
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200;
+        }
+        
+        .btn-secondary {
+            @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition duration-200;
+        }
+        
+        .btn-success {
+            @apply bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200;
+        }
+        
+        .btn-danger {
+            @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200;
+        }
+        
+        .card {
+            @apply bg-white rounded-xl shadow-md overflow-hidden;
+        }
+        
+        .card-header {
+            @apply px-6 py-4 border-b bg-gray-50;
+        }
+        
+        .card-body {
+            @apply p-6;
+        }
+        
+        .alert {
+            @apply border rounded-lg p-4 mb-4;
+        }
+        
+        .alert-success {
+            @apply bg-green-50 border-green-200 text-green-800;
+        }
+        
+        .alert-error {
+            @apply bg-red-50 border-red-200 text-red-800;
+        }
+        
+        .alert-warning {
+            @apply bg-yellow-50 border-yellow-200 text-yellow-800;
+        }
+        
+        .alert-info {
+            @apply bg-blue-50 border-blue-200 text-blue-800;
+        }
+        
+        /* Loading states */
+        .loading {
+            @apply opacity-50 pointer-events-none;
+        }
+        
+        .spinner {
+            @apply inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-current;
+        }
+        
+        /* Focus states for accessibility */
+        .focus-ring {
+            @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+        }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Animation classes */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        {% block extra_css %}{% endblock %}
+    </style>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white p-2 rounded">
+        Saltar al contenido principal
+    </a>
+    
+    <!-- Header -->
+    {% block header %}
+    <header class="bg-white shadow-sm border-b">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center hover:opacity-80 transition">
+                        <div class="bg-blue-600 p-2 rounded-lg text-white mr-3">
+                            <i class="fas fa-gas-pump"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Gasoradar</h1>
+                            <p class="text-sm text-gray-600 hidden sm:block">Precios actualizados en tiempo real</p>
+                        </div>
+                    </a>
+                </div>
+                
+                <nav class="hidden md:flex items-center space-x-6">
+                    <a href="/" class="text-gray-600 hover:text-blue-600 transition font-medium {% if request.url.path == '/' %}text-blue-600{% endif %}">
+                        <i class="fas fa-home mr-1"></i>Inicio
+                    </a>
+                    <a href="/mapa" class="text-gray-600 hover:text-blue-600 transition font-medium {% if request.url.path == '/mapa' %}text-blue-600{% endif %}">
+                        <i class="fas fa-map mr-1"></i>Mapa
+                    </a>
+                    <a href="/reporte" class="text-gray-600 hover:text-blue-600 transition font-medium {% if request.url.path == '/reporte' %}text-blue-600{% endif %}">
+                        <i class="fas fa-plus mr-1"></i>Reportar
+                    </a>
+                    <a href="/reseña" class="text-gray-600 hover:text-blue-600 transition font-medium {% if request.url.path == '/reseña' %}text-blue-600{% endif %}">
+                        <i class="fas fa-star mr-1"></i>Reseñas
+                    </a>
+                </nav>
+                
+                <!-- Mobile menu button -->
+                <button id="mobileMenuBtn" class="md:hidden text-gray-600 hover:text-blue-600 transition">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Mobile menu -->
+            <div id="mobileMenu" class="hidden mt-4 pb-4 border-t pt-4 md:hidden">
+                <nav class="flex flex-col space-y-3">
+                    <a href="/" class="text-gray-600 hover:text-blue-600 transition font-medium {% if request.url.path == '/' %}text-blue-600{% endif %}">
+                        <i class="fas fa-home mr-2"></i>Inicio
+                    </a>
+                    <a href="/mapa" class="text-gray-600 hover:text-blue-600 transition font-medium {% if request.url.path == '/mapa' %}text-blue-600{% endif %}">
+                        <i class="fas fa-map mr-2"></i>Mapa
+                    </a>
+                    <a href="/reporte" class="text-gray-600 hover:text-blue-600 transition font-medium {% if request.url.path == '/reporte' %}text-blue-600{% endif %}">
+                        <i class="fas fa-plus mr-2"></i>Reportar Precio
+                    </a>
+                    <a href="/reseña" class="text-gray-600 hover:text-blue-600 transition font-medium {% if request.url.path == '/reseña' %}text-blue-600{% endif %}">
+                        <i class="fas fa-star mr-2"></i>Reseñas
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </header>
+    {% endblock %}
+    
+    <!-- Flash Messages -->
+    {% block flash_messages %}
+    <div id="flashMessages" class="container mx-auto px-4 mt-4">
+        <!-- Flash messages will be inserted here by JavaScript -->
+    </div>
+    {% endblock %}
+    
+    <!-- Main Content -->
+    <main id="main-content">
+        {% block content %}
+        <div class="container mx-auto px-4 py-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Contenido Principal</h2>
+            <p class="text-gray-600">Este es el contenido base. Debe ser sobrescrito por las páginas individuales.</p>
+        </div>
+        {% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    {% block footer %}
+    <footer class="bg-gray-900 text-white mt-12">
+        <div class="container mx-auto px-4 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center mb-4">
+                        <div class="bg-blue-600 p-2 rounded-lg text-white mr-3">
+                            <i class="fas fa-gas-pump"></i>
+                        </div>
+                        <span class="text-xl font-bold">Gasoradar</span>
+                    </div>
+                    <p class="text-gray-400">
+                        Encuentra las gasolineras más baratas de México con precios actualizados por la comunidad.
+                    </p>
+                    <div class="flex space-x-4 mt-4">
+                        <a href="#" class="text-gray-400 hover:text-white transition">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition">
+                            <i class="fab fa-facebook"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Navegación</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="/" class="hover:text-white transition">Inicio</a></li>
+                        <li><a href="/mapa" class="hover:text-white transition">Mapa Interactivo</a></li>
+                        <li><a href="/reporte" class="hover:text-white transition">Reportar Precio</a></li>
+                        <li><a href="/reseña" class="hover:text-white transition">Escribir Reseña</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Información</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="/acerca" class="hover:text-white transition">Acerca de</a></li>
+                        <li><a href="/como-funciona" class="hover:text-white transition">Cómo Funciona</a></li>
+                        <li><a href="/terminos" class="hover:text-white transition">Términos de Uso</a></li>
+                        <li><a href="/privacidad" class="hover:text-white transition">Política de Privacidad</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Contacto</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li>
+                            <a href="mailto:contacto@gasoradar.com" class="hover:text-white transition">
+                                <i class="fas fa-envelope mr-2"></i>contacto@gasoradar.com
+                            </a>
+                        </li>
+                        <li>
+                            <span><i class="fas fa-phone mr-2"></i>+52 (55) 1234-5678</span>
+                        </li>
+                        <li>
+                            <span><i class="fas fa-map-marker-alt mr-2"></i>Ciudad de México, México</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2024 Gasoradar. Todos los derechos reservados.</p>
+                <p class="mt-1 text-sm">Los precios pueden variar sin previo aviso. Verificar directamente con la gasolinera.</p>
+            </div>
+        </div>
+    </footer>
+    {% endblock %}
+    
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 text-center">
+            <div class="spinner mb-4 mx-auto"></div>
+            <p class="text-gray-600">Cargando...</p>
+        </div>
+    </div>
+    
+    <!-- Base JavaScript -->
+    <script>
+        // Global utilities
+        window.Gasoradar = {
+            // Show/hide loading overlay
+            showLoading: function() {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+            },
+            
+            hideLoading: function() {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            },
+            
+            // Flash message system
+            showFlash: function(message, type = 'info') {
+                const container = document.getElementById('flashMessages');
+                const alertClasses = {
+                    success: 'alert-success',
+                    error: 'alert-error',
+                    warning: 'alert-warning',
+                    info: 'alert-info'
+                };
+                
+                const flash = document.createElement('div');
+                flash.className = `alert ${alertClasses[type]} fade-in`;
+                flash.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span>${message}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" class="text-current opacity-50 hover:opacity-100">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                container.appendChild(flash);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    if (flash.parentNode) {
+                        flash.remove();
+                    }
+                }, 5000);
+            },
+            
+            // API helper
+            api: async function(endpoint, options = {}) {
+                const defaults = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                const config = Object.assign({}, defaults, options);
+                
+                try {
+                    const response = await fetch(endpoint, config);
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.detail || 'Error en la solicitud');
+                    }
+                    
+                    return data;
+                } catch (error) {
+                    console.error('API Error:', error);
+                    throw error;
+                }
+            },
+            
+            // Format currency
+            formatCurrency: function(amount) {
+                return new Intl.NumberFormat('es-MX', {
+                    style: 'currency',
+                    currency: 'MXN'
+                }).format(amount);
+            },
+            
+            // Format distance
+            formatDistance: function(km) {
+                if (km < 1) {
+                    return Math.round(km * 1000) + ' m';
+                }
+                return km.toFixed(1) + ' km';
+            },
+            
+            // Time ago helper
+            timeAgo: function(dateString) {
+                const now = new Date();
+                const date = new Date(dateString);
+                const diffInSeconds = Math.floor((now - date) / 1000);
+                
+                if (diffInSeconds < 60) return 'Hace un momento';
+                
+                const diffInMinutes = Math.floor(diffInSeconds / 60);
+                if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
+                
+                const diffInHours = Math.floor(diffInMinutes / 60);
+                if (diffInHours < 24) return `Hace ${diffInHours}h`;
+                
+                const diffInDays = Math.floor(diffInHours / 24);
+                return `Hace ${diffInDays} días`;
+            }
+        };
+        
+        // Mobile menu toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
